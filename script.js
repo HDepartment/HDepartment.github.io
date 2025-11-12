@@ -753,14 +753,15 @@ function updateUIForLoggedInUser(user) {
   const isAdmin = currentUserProfile?.is_admin === true;
   const adminBadge = isAdmin ? '<span style="background:#ff9db1;color:white;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:8px;">Admin</span>' : '';
 
+  // Create user menu HTML - MOVED OUTSIDE NAVBAR
   const userMenuHTML = `
-    <li id="userMenuContainer" style="position:relative;list-style:none;">
+    <div id="userMenuContainer" style="position:relative;list-style:none;">
       <button id="userAvatarBtn" aria-label="Open user menu" 
         style="width:48px;height:48px;border-radius:50%;background:${UI.avatarPink};color:#fff;border:3px solid #fff;cursor:pointer;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(255,125,167,0.12);">
         ${initial}
       </button>
 
-      <div id="userDropdown" style="display:none;position:absolute;top:60px;right:0;background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,0.12);width:220px;z-index:1000;">
+      <div id="userDropdown" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,0.12);width:90%;max-width:300px;z-index:10002;padding:0;">
         <div style="padding:14px 16px;border-radius:14px 14px 0 0;background:linear-gradient(180deg,rgba(255,249,250,1),#fff);">
           <div style="display:flex;align-items:center;flex-wrap:wrap;">
             <p style="margin:0;font-weight:800;color:#221;font-size:15px;line-height:1.4;">${displayName}</p>
@@ -788,10 +789,18 @@ function updateUIForLoggedInUser(user) {
           </button>
         </div>
       </div>
-    </li>
+    </div>
   `;
 
   openModalBtn.outerHTML = userMenuHTML;
+
+  // Add backdrop for mobile dropdown
+  if (!document.getElementById('userDropdownBackdrop')) {
+    const backdrop = document.createElement('div');
+    backdrop.id = 'userDropdownBackdrop';
+    backdrop.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:10001;display:none;';
+    document.body.appendChild(backdrop);
+  }
 
   setTimeout(() => {
     attachUserMenuHandlers();
@@ -801,47 +810,77 @@ function updateUIForLoggedInUser(user) {
 function attachUserMenuHandlers() {
   const avatarBtn = document.getElementById('userAvatarBtn');
   const dropdown = document.getElementById('userDropdown');
+  const backdrop = document.getElementById('userDropdownBackdrop');
   const viewProfileBtn = document.getElementById('viewProfileBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const adminPanelBtn = document.getElementById('adminPanelBtn');
 
+  function closeDropdown() {
+    if (dropdown) {
+      dropdown.style.display = 'none';
+    }
+    if (backdrop) {
+      backdrop.style.display = 'none';
+    }
+  }
+
+  function openDropdown() {
+    if (dropdown) {
+      dropdown.style.display = 'block';
+      dropdown.style.opacity = '0';
+      dropdown.style.transform = 'translate(-50%, -50%) scale(0.9)';
+      
+      setTimeout(() => {
+        dropdown.style.transition = 'opacity 160ms ease, transform 160ms ease';
+        dropdown.style.opacity = '1';
+        dropdown.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 8);
+    }
+    if (backdrop) {
+      backdrop.style.display = 'block';
+      backdrop.style.opacity = '0';
+      setTimeout(() => {
+        backdrop.style.transition = 'opacity 160ms ease';
+        backdrop.style.opacity = '1';
+      }, 8);
+    }
+  }
+
   if (avatarBtn && dropdown) {
     avatarBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (!dropdown) return;
       if (dropdown.style.display === 'none' || dropdown.style.display === '') {
-        dropdown.style.display = 'block';
-        dropdown.style.opacity = '0';
-        dropdown.style.transform = 'translateY(-6px)';
-        setTimeout(() => {
-          dropdown.style.transition = 'opacity 160ms ease, transform 160ms ease';
-          dropdown.style.opacity = '1';
-          dropdown.style.transform = 'translateY(0)';
-        }, 8);
+        openDropdown();
       } else {
-        dropdown.style.transition = 'opacity 120ms ease, transform 120ms ease';
-        dropdown.style.opacity = '0';
-        dropdown.style.transform = 'translateY(-6px)';
-        setTimeout(() => { dropdown.style.display = 'none'; }, 140);
+        closeDropdown();
       }
     });
   }
 
-  if (adminPanelBtn) adminPanelBtn.addEventListener('click', function() { if (dropdown) dropdown.style.display = 'none'; window.location.href = 'admin.html'; });
-  if (viewProfileBtn) viewProfileBtn.addEventListener('click', function() { if (dropdown) dropdown.style.display = 'none'; openProfileSettings(); });
-  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  if (backdrop) {
+    backdrop.addEventListener('click', closeDropdown);
+  }
 
-  document.addEventListener('click', function(event) {
-    const dd = document.getElementById('userDropdown');
-    const av = document.getElementById('userAvatarBtn');
-    if (!dd) return;
-    if (event.target !== dd && !dd.contains(event.target) && event.target !== av && !av?.contains(event.target)) {
-      if (dd.style.display === 'block') {
-        dd.style.transition = 'opacity 120ms ease, transform 120ms ease';
-        dd.style.opacity = '0';
-        dd.style.transform = 'translateY(-6px)';
-        setTimeout(() => { dd.style.display = 'none'; }, 140);
-      }
+  if (adminPanelBtn) adminPanelBtn.addEventListener('click', function() { 
+    closeDropdown();
+    window.location.href = 'admin.html'; 
+  });
+  
+  if (viewProfileBtn) viewProfileBtn.addEventListener('click', function() { 
+    closeDropdown();
+    openProfileSettings(); 
+  });
+  
+  if (logoutBtn) logoutBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeDropdown();
+    handleLogout(e);
+  });
+
+  // Close on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeDropdown();
     }
   });
 }
@@ -1378,6 +1417,21 @@ async function loadCart() {
     cartItemsContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">Error loading cart</div>';
     if (subtotalEl) subtotalEl.textContent = 'RWF 0';
   }
+  // In the loadCart function, after calculating the cart items:
+const checkoutBtn = document.getElementById('checkout');
+if (checkoutBtn) {
+  if (totalItems === 0) {
+    checkoutBtn.disabled = true;
+    checkoutBtn.style.opacity = '0.6';
+    checkoutBtn.style.cursor = 'not-allowed';
+    checkoutBtn.title = 'Cart is empty';
+  } else {
+    checkoutBtn.disabled = false;
+    checkoutBtn.style.opacity = '1';
+    checkoutBtn.style.cursor = 'pointer';
+    checkoutBtn.title = 'Proceed to checkout';
+  }
+}
 }
 
 
@@ -1407,11 +1461,41 @@ async function updateCartBadge() {
   });
 }
 
+async function getCartItemCount() {
+  let totalItems = 0;
 
+  if (currentUser && supabase) {
+    try {
+      const { data } = await supabase
+        .from('cart_items')
+        .select('quantity')
+        .eq('user_id', currentUser.id);
+      if (Array.isArray(data)) {
+        totalItems = data.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      }
+    } catch (error) {
+      console.error('Error getting cart item count (DB):', error);
+    }
+  } else {
+    const cart = getTempCart();
+    if (Array.isArray(cart)) {
+      totalItems = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    }
+  }
+
+  return totalItems;
+}
 
 
 
 async function handleCheckout() {
+  // Check if cart is empty
+  const itemCount = await getCartItemCount();
+  if (itemCount === 0) {
+    showMessage('Your cart is empty! Add some products before checkout.', 'error');
+    return;
+  }
+
   if (!currentUser) {
     // Show login modal for unsigned users
     const modal = document.getElementById('modal');
@@ -1606,6 +1690,7 @@ function initializeApp() {
   initializeApp._ran = true;
 
   try {
+    setupCleanURLs();
     // Ensure supabase client exists
     ensureSupabaseClient();
 
@@ -1884,3 +1969,29 @@ if (document.readyState === 'loading') {
 } else {
   setupMobileMenu();
 }
+
+// Clean URLs - Remove .html extension
+function setupCleanURLs() {
+  // Update all internal links to remove .html
+  document.querySelectorAll('a[href]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (href && href.endsWith('.html') && !href.startsWith('http')) {
+      link.setAttribute('href', href.replace('.html', ''));
+    }
+  });
+  
+  // Handle navigation without .html
+  window.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.getAttribute('href') && !link.getAttribute('href').includes('.html') && 
+        !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('#')) {
+      e.preventDefault();
+      const href = link.getAttribute('href');
+      window.location.href = href + '.html';
+    }
+  });
+}
+
+// Call this function in your initializeApp function
+// Add this line inside initializeApp():
+// setupCleanURLs();
