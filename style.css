@@ -127,7 +127,7 @@ button:active { opacity: 0.8; }
 
 /*Home Page*/
 #hero{
-  background-image: url("img/land.png");
+  background-image: url("img/land.jpg");
   height: 90vh;
   width: 100%;
   background-size: cover;
@@ -137,6 +137,8 @@ button:active { opacity: 0.8; }
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
+  background-color: rgba(0,0,0,0.3); /* dark overlay */
+  background-blend-mode: multiply; 
 }
 #hero h4 { padding-bottom: 15px; }
 #hero h1 { color: #ff69b4; }
@@ -933,3 +935,4 @@ body.signin-page {
     display: none !important;
   }
 }
+
