@@ -1543,86 +1543,57 @@ function setupCleanURLs() {
   });
 }
 
-// ==============================================
-// 8. MOBILE SIDEBAR MENU (LEFT SLIDE)
-// (This is the more robust version)
-// ==============================================
-
 function setupMobileMenu() {
   const bar = document.getElementById('bar');
   const close = document.getElementById('close');
   const nav = document.getElementById('navbar');
   const body = document.body;
   
-  // Open menu from left
   if (bar && nav) {
     bar.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       nav.classList.add('active');
-      body.classList.add('menu-open');
+      body.style.overflow = 'hidden'; // Prevent scrolling when menu is open
     });
   }
   
-  // Close menu
   if (close && nav) {
     close.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      closeMenu();
+      nav.classList.remove('active');
+      body.style.overflow = ''; // Restore scrolling
     });
   }
   
-  // Close menu when clicking on backdrop
-  body.addEventListener('click', (e) => {
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
     if (nav && nav.classList.contains('active')) {
-      const isClickInsideNav = nav.contains(e.target);
-      const isClickOnBar = bar && bar.contains(e.target);
-      
-      if (!isClickInsideNav && !isClickOnBar) {
-        closeMenu();
+      if (!nav.contains(e.target) && e.target !== bar) {
+        nav.classList.remove('active');
+        body.style.overflow = '';
       }
     }
   });
   
-  // Close menu when clicking on any navigation link
+  // Close menu when clicking on a link
   if (nav) {
     const navLinks = nav.querySelectorAll('a');
     navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        // Only close if it's not the cart toggle
-        if (!link.classList.contains('cart-btn')) {
-          setTimeout(() => {
-            closeMenu();
-          }, 200);
-        }
+      link.addEventListener('click', () => {
+        nav.classList.remove('active');
+        body.style.overflow = '';
       });
     });
   }
-  
-  // Close menu function
-  function closeMenu() {
-    if (nav) nav.classList.remove('active');
-    body.classList.remove('menu-open');
-  }
-  
-  // Close menu on escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && nav && nav.classList.contains('active')) {
-      closeMenu();
-    }
-  });
-  
-  // Handle window resize
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      if (window.innerWidth > 799 && nav) {
-        closeMenu();
-      }
-    }, 250);
-  });
+}
+
+// Call this function when the page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupMobileMenu);
+} else {
+  setupMobileMenu();
 }
 
 // ==============================================
@@ -1826,3 +1797,4 @@ async function updateCartBadge() {
   // Also keep product icons in sync (useful if updateBadge called after external change)
   try { await refreshProductInCartStates(); } catch (e) { /* ignore */ }
 }
+
