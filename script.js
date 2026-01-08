@@ -64,10 +64,10 @@ function ensureSupabaseClient() {
   } catch(e){ /* ignore */ }
 })();
 
-let supabase = null;
-let currentUser = null;
-let currentUserProfile = null;
-let isProcessingAuth = false;
+var supabase = window.supabase || null;
+var currentUser = null;
+var currentUserProfile = null;
+var isProcessingAuth = false;
 
 const UI = {
   primaryPink: '#ff9db1',
@@ -1836,3 +1836,4 @@ async function updateCartBadge() {
   // Also keep product icons in sync (useful if updateBadge called after external change)
   try { await refreshProductInCartStates(); } catch (e) { /* ignore */ }
 }
+
