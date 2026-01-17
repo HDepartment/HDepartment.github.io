@@ -475,10 +475,10 @@
     const SUPABASE_URL = 'https://hlskxkqwymuxcjgswqnv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhsc2t4a3F3eW11eGNqZ3N3cW52Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MzQ1ODIsImV4cCI6MjA3MzAxMDU4Mn0.NdGjbd7Y1QorTF5BIqAduItcvbh1OdP1Y2qNYf0pILw';
     const BUCKET = 'product-images';
-    let supabase = null;
+    let supabaseClient = null;
 
     try {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
       console.error('Supabase init error:', e);
     }
@@ -542,13 +542,13 @@
       if (!container) return;
       container.innerHTML = '<div style="padding:20px;color:#666;">Loading orders...</div>';
 
-      if (!supabase) {
+      if (!supabaseClient) {
         container.innerHTML = '<div class="muted">Supabase not initialized</div>';
         return;
       }
 
       try {
-        const { data: ordersRaw, error: ordErr } = await supabase.from('orders').select('*');
+        const { data: ordersRaw, error: ordErr } = await supabaseClient.from('orders').select('*');
         if (ordErr) throw ordErr;
         if (!ordersRaw || ordersRaw.length === 0) {
           container.innerHTML = '<div class="muted" style="padding:12px;color:#666;">No orders yet.</div>';
@@ -560,7 +560,7 @@
 
         let usersById = {};
         if (userIds.length > 0) {
-          const { data: profiles, error: profErr } = await supabase
+          const { data: profiles, error: profErr } = await supabaseClient
             .from('profiles')
             .select('id, full_name, email, phone')
             .in('id', userIds);
@@ -571,7 +571,7 @@
 
         let productsById = {};
         if (productIds.length > 0) {
-          const { data: products, error: prodErr } = await supabase.from('products').select('id, name, price, image_url');
+          const { data: products, error: prodErr } = await supabaseClient.from('products').select('id, name, price, image_url');
           if (!prodErr && products) products.forEach(p => productsById[p.id] = p);
         }
 
@@ -635,7 +635,7 @@
 
           card.querySelector('[data-action="cancel"]').onclick = async () => {
             if (!confirm('Cancel this order?')) return;
-            const { error } = await supabase.from('orders').delete().eq('id', o.id);
+            const { error } = await supabaseClient.from('orders').delete().eq('id', o.id);
             if (error) showMessage('Delete failed: ' + error.message, 'error');
             else {
               showMessage('Order cancelled', 'success');
@@ -645,7 +645,7 @@
 
           card.querySelector('[data-action="done"]').onclick = async () => {
             const newDone = !o.done_order;
-            const { error } = await supabase.from('orders').update({ done_order: newDone }).eq('id', o.id);
+            const { error } = await supabaseClient.from('orders').update({ done_order: newDone }).eq('id', o.id);
             if (error) showMessage('Update failed: ' + error.message, 'error');
             else {
               showMessage(`Order ${newDone ? 'marked done' : 'undone'}`, 'success');
@@ -679,13 +679,13 @@
       
       grid.innerHTML = '<div style="padding:20px;color:#666;">Loading products...</div>';
 
-      if (!supabase) {
+      if (!supabaseClient) {
         grid.innerHTML = '<div class="muted">Supabase not initialized</div>';
         return;
       }
 
       try {
-        let query = supabase
+        let query = supabaseClient
           .from('products')
           .select('*')
           .order('created_at', { ascending: false });
@@ -783,7 +783,7 @@
           btn.disabled = true;
           btn.textContent = 'Saving...';
           try {
-            const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
+            const { error } = await supabaseClient.from('products').update({ stock: newStock }).eq('id', id);
             if (error) throw error;
             updateStockOnUI(id, newStock);
             showMessage('Stock updated', 'success');
@@ -802,7 +802,7 @@
           const id = input.getAttribute('data-id');
           const value = Math.max(0, parseInt(input.value || 0, 10));
           try {
-            const { error } = await supabase.from('products').update({ stock: value }).eq('id', id);
+            const { error } = await supabaseClient.from('products').update({ stock: value }).eq('id', id);
             if (error) throw error;
             updateStockOnUI(id, value);
             showMessage('Stock saved', 'success');
@@ -828,9 +828,9 @@
           try {
             if (imageUrl) {
               const path = extractPathFromUrl(imageUrl);
-              if (path) await supabase.storage.from(BUCKET).remove([path]);
+              if (path) await supabaseClient.storage.from(BUCKET).remove([path]);
             }
-            const { error } = await supabase.from('products').delete().eq('id', productId);
+            const { error } = await supabaseClient.from('products').delete().eq('id', productId);
             if (error) throw error;
             showMessage('Product deleted', 'success');
             loadProducts();
@@ -847,7 +847,7 @@
           const prodId = e.target.getAttribute('data-id');
           if (checked) {
             try {
-              const { error: rpcError } = await supabase.rpc('set_featured_product', { p_id: prodId, p_featured: true });
+              const { error: rpcError } = await supabaseClient.rpc('set_featured_product', { p_id: prodId, p_featured: true });
               if (rpcError) throw rpcError;
               showMessage('Product marked as featured (server)', 'success');
               return;
@@ -859,7 +859,7 @@
                   showMessage('Cannot mark featured – limit of 4 reached.', 'error');
                   return;
                 }
-                const { error } = await supabase.from('products').update({ featured_products: true }).eq('id', prodId);
+                const { error } = await supabaseClient.from('products').update({ featured_products: true }).eq('id', prodId);
                 if (error) throw error;
                 showMessage('Product marked as featured', 'success');
               } catch (err) {
@@ -870,13 +870,13 @@
             }
           } else {
             try {
-              const { error: rpcError } = await supabase.rpc('set_featured_product', { p_id: prodId, p_featured: false });
+              const { error: rpcError } = await supabaseClient.rpc('set_featured_product', { p_id: prodId, p_featured: false });
               if (rpcError) throw rpcError;
               showMessage('Product unmarked as featured (server)', 'success');
               return;
             } catch (rpcErr) {
               try {
-                const { error } = await supabase.from('products').update({ featured_products: false }).eq('id', prodId);
+                const { error } = await supabaseClient.from('products').update({ featured_products: false }).eq('id', prodId);
                 if (error) throw error;
                 showMessage('Product unmarked as featured', 'success');
               } catch (err) {
@@ -891,8 +891,8 @@
     }
 
     async function countFeatured() {
-      if (!supabase) throw new Error('Supabase not initialized');
-      const res = await supabase
+      if (!supabaseClient) throw new Error('Supabase not initialized');
+      const res = await supabaseClient
         .from('products')
         .select('id', { head: true, count: 'exact' })
         .eq('featured_products', true);
@@ -917,13 +917,13 @@
       table.style.display = 'none';
       empty.style.display = 'none';
 
-      if (!supabase) {
+      if (!supabaseClient) {
         loading.innerHTML = '<div style="color:#c62828;">Supabase not initialized</div>';
         return;
       }
 
       try {
-        const { data: profiles, error } = await supabase
+        const { data: profiles, error } = await supabaseClient
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false });
@@ -998,7 +998,7 @@
 
       if (featured) {
         try {
-          const cntRes = await supabase.from('products').select('id', { head: true, count: 'exact' }).eq('featured_products', true);
+          const cntRes = await supabaseClient.from('products').select('id', { head: true, count: 'exact' }).eq('featured_products', true);
           const cnt = cntRes.count || 0;
           if (cnt >= 4) {
             showMessage('Cannot mark as featured – limit of 4 featured products reached.', 'error');
@@ -1011,9 +1011,9 @@
 
       statusEl.textContent = 'Uploading...';
       try {
-        if (!supabase) throw new Error('Supabase not initialized');
+        if (!supabaseClient) throw new Error('Supabase not initialized');
 
-        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        const { data: userData, error: userErr } = await supabaseClient.auth.getUser();
         if (userErr || !userData.user) {
           alert('You must be signed in');
           statusEl.textContent = 'Auth required';
@@ -1026,7 +1026,7 @@
         const fileName = `prod_${Date.now()}.${ext || 'png'}`;
 
         statusEl.textContent = 'Uploading image...';
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from(BUCKET)
           .upload(fileName, file, { contentType: file.type, upsert: false });
 
@@ -1035,11 +1035,11 @@
           return;
         }
 
-        const pubRes = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+        const pubRes = supabaseClient.storage.from(BUCKET).getPublicUrl(fileName);
         const publicUrl = pubRes?.data?.publicUrl || pubRes?.publicURL || null;
 
         statusEl.textContent = 'Saving to database...';
-        const { data: insertData, error: insertErr } = await supabase
+        const { data: insertData, error: insertErr } = await supabaseClient
           .from('products')
           .insert([{
             name,
@@ -1054,7 +1054,7 @@
 
         if (insertErr) {
           statusEl.textContent = 'Database error: ' + insertErr.message;
-          await supabase.storage.from(BUCKET).remove([fileName]);
+          await supabaseClient.storage.from(BUCKET).remove([fileName]);
           return;
         }
 
@@ -1069,12 +1069,12 @@
     });
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      try { if (supabase) await supabase.auth.signOut(); } catch (e) { console.warn('Signout error:', e); }
+      try { if (supabaseClient) await supabaseClient.auth.signOut(); } catch (e) { console.warn('Signout error:', e); }
       window.location.href = 'index.html';
     });
 
     document.getElementById('logoutBtnMobile').addEventListener('click', async () => {
-      try { if (supabase) await supabase.auth.signOut(); } catch (e) { console.warn('Signout error:', e); }
+      try { if (supabaseClient) await supabaseClient.auth.signOut(); } catch (e) { console.warn('Signout error:', e); }
       window.location.href = 'index.html';
     });
 
