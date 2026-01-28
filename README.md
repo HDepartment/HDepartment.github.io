@@ -1,6 +1,6 @@
-# Debo-web
+# GodsonlyStore
 
 
-This is a demo of debo's webapp. Do your thing, signing out. Peace out 
+This is Godsonlystore website.
 
 Signed by whatis5o............
